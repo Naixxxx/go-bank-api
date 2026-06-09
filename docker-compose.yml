@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: bank
+      POSTGRES_PASSWORD: bank
+      POSTGRES_DB: bank
+    ports:
+      - "5432:5432"
+    volumes:
+      - bank_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bank -d bank"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    environment:
+      APP_PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: bank
+      DB_PASSWORD: bank
+      DB_NAME: bank
+      DB_SSLMODE: disable
+      JWT_SECRET: change_me_very_secret_jwt
+      HMAC_SECRET: change_me_very_secret_hmac
+      PGP_PASSPHRASE: change_me_very_secret_pgp
+      CREDIT_MARGIN: 5
+      SCHEDULER_INTERVAL: 12h
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_FROM: noreply@bank.local
+      LOG_LEVEL: debug
+    ports:
+      - "8080:8080"
+
+volumes:
+  bank_pgdata:
